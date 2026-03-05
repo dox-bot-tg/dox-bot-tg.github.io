@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://твой-домен.github.io/sitemap-dox-bot.xml
+Sitemap: https://dox-bot-tg.github.io/sitemap-dox-bot.xml
