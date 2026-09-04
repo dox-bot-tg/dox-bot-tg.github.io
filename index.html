@@ -315,8 +315,6 @@
 
 <script data-telegram-goal-runtime>
 (function () {
-  var GOAL_NAME = "telegram_click";
-  var GOAL_TIMEOUT_MS = 250;
   var TARGET_HOSTS = {
     "t.me": 1, "www.t.me": 1, "telegram.me": 1, "www.telegram.me": 1,
     "tx.me": 1, "www.tx.me": 1, "myschoolapi.xyz": 1,
@@ -352,37 +350,15 @@
     catch (_) { return false; }
   }
 
-  function sendGoal(callback) {
+  function transitionUrl(link) {
+    var destination = link.href;
     var ids = counterIds();
-    if (!ids.length || typeof window.ym !== "function") {
-      callback();
-      return;
-    }
-    var finished = false;
-    var pending = ids.length;
-    function done() {
-      if (finished) return;
-      finished = true;
-      callback();
-    }
-    var timer = setTimeout(done, GOAL_TIMEOUT_MS);
-    ids.forEach(function (id) {
-      try {
-        window.ym(Number(id), "reachGoal", GOAL_NAME, {}, function () {
-          pending -= 1;
-          if (pending <= 0) {
-            clearTimeout(timer);
-            done();
-          }
-        });
-      } catch (_) {
-        pending -= 1;
-        if (pending <= 0) {
-          clearTimeout(timer);
-          done();
-        }
-      }
-    });
+    if (!ids.length) return destination;
+    try {
+      var parsed = new URL(destination, location.href);
+      parsed.searchParams.set("ymid", ids.join(","));
+      return parsed.href;
+    } catch (_) { return destination; }
   }
 
   document.addEventListener("click", function (event) {
@@ -391,11 +367,9 @@
     var link = target && target.closest && target.closest("a[href]");
     if (!link || !isTelegramCta(link)) return;
 
-    var opensNewContext = link.target && link.target.toLowerCase() !== "_self";
-    if (opensNewContext) {
-      sendGoal(function () {});
-      return;
-    }
+    var destination = transitionUrl(link);
+    link.href = destination;
+    if (link.target && link.target.toLowerCase() !== "_self") return;
 
     if (link.getAttribute("data-metrika-navigating") === "1") {
       event.preventDefault();
@@ -404,8 +378,9 @@
     event.preventDefault();
     link.setAttribute("data-metrika-navigating", "1");
     link.setAttribute("aria-busy", "true");
-    var destination = link.href;
-    sendGoal(function () { window.location.assign(destination); });
+    // telegram_click is emitted by the manager only after it has resolved and
+    // validated a Telegram target. A plain CTA click is not a conversion.
+    window.location.assign(destination);
   }, true);
 })();
 </script>
