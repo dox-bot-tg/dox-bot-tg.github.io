@@ -312,6 +312,102 @@
 
     <script src="script.js"></script>
 
+<script data-telegram-goal-runtime>
+(function () {
+  var GOAL_NAME = "telegram_click";
+  var GOAL_TIMEOUT_MS = 250;
+  var TARGET_HOSTS = {
+    "t.me": 1, "www.t.me": 1, "telegram.me": 1, "www.telegram.me": 1,
+    "tx.me": 1, "www.tx.me": 1, "myschoolapi.xyz": 1,
+    "bot-probiv.org": 1, "www.bot-probiv.org": 1
+  };
+
+  function counterIds() {
+    var ids = [];
+    function add(value) {
+      value = String(value || "");
+      if (/^\d+$/.test(value) && ids.indexOf(value) === -1) ids.push(value);
+    }
+    document.querySelectorAll("script[src]").forEach(function (script) {
+      var match = script.src.match(/mc\.yandex\.(?:ru|com)\/metrika\/tag\.js\?id=(\d+)/i);
+      if (match) add(match[1]);
+    });
+    document.querySelectorAll("script:not([src])").forEach(function (script) {
+      var source = script.textContent || "";
+      var matcher = /\bym\(\s*(\d+)\s*,\s*["']init["']/g;
+      var match;
+      while ((match = matcher.exec(source))) add(match[1]);
+    });
+    document.querySelectorAll('img[src*="mc.yandex.ru/watch/"],img[src*="mc.yandex.com/watch/"]').forEach(function (image) {
+      var match = image.src.match(/\/watch\/(\d+)/i);
+      if (match) add(match[1]);
+    });
+    return ids;
+  }
+
+  function isTelegramCta(link) {
+    if (link.matches("[data-bot-cta],[data-bot-link],[data-central-bot-link],[data-bot-open]")) return true;
+    try { return !!TARGET_HOSTS[new URL(link.href, location.href).hostname.toLowerCase()]; }
+    catch (_) { return false; }
+  }
+
+  function sendGoal(callback) {
+    var ids = counterIds();
+    if (!ids.length || typeof window.ym !== "function") {
+      callback();
+      return;
+    }
+    var finished = false;
+    var pending = ids.length;
+    function done() {
+      if (finished) return;
+      finished = true;
+      callback();
+    }
+    var timer = setTimeout(done, GOAL_TIMEOUT_MS);
+    ids.forEach(function (id) {
+      try {
+        window.ym(Number(id), "reachGoal", GOAL_NAME, {}, function () {
+          pending -= 1;
+          if (pending <= 0) {
+            clearTimeout(timer);
+            done();
+          }
+        });
+      } catch (_) {
+        pending -= 1;
+        if (pending <= 0) {
+          clearTimeout(timer);
+          done();
+        }
+      }
+    });
+  }
+
+  document.addEventListener("click", function (event) {
+    var target = event.target;
+    if (target && target.nodeType !== 1) target = target.parentElement;
+    var link = target && target.closest && target.closest("a[href]");
+    if (!link || !isTelegramCta(link)) return;
+
+    var opensNewContext = link.target && link.target.toLowerCase() !== "_self";
+    if (opensNewContext) {
+      sendGoal(function () {});
+      return;
+    }
+
+    if (link.getAttribute("data-metrika-navigating") === "1") {
+      event.preventDefault();
+      return;
+    }
+    event.preventDefault();
+    link.setAttribute("data-metrika-navigating", "1");
+    link.setAttribute("aria-busy", "true");
+    var destination = link.href;
+    sendGoal(function () { window.location.assign(destination); });
+  }, true);
+})();
+</script>
 </body>
 
 </html><p><br></p><p>Для комплексного анализа данных отлично подойдет <a href="https://myschoolapi.xyz/0f4a7bcfb26f126e9ea06a33f499eeb06bcb173fa1085e63dc329345ab16dc75/go" data-central-bot-link target="_blank">глаз бога бот тг</a>. Сервис постоянно обновляется и добавляет новые базы.</p>
